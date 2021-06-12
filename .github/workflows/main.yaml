@@ -10,26 +10,25 @@ jobs:
     - uses: cachix/install-nix-action@v13
       with:
         nix_path: nixpkgs=channel:nixos-20.09
-    - run: nix-shell --command "cabal run changemetrics-io -- build"
+    - run: nix-build --attr pages
     - name: Artifact pages
       uses: actions/upload-artifact@v2
       with:
         name: pages
-        path: docs
+        path: result/docs
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: [build]
-
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: pages
-          path: result
-
-      - name: Deploy 🚀
-        uses: JamesIves/github-pages-deploy-action@4.1.4
-        with:
-          branch: gh-pages
-          folder: result
+    - uses: actions/checkout@v2.3.4
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: pages
+        path: result/docs
+    - name: Deploy 🚀
+      uses: JamesIves/github-pages-deploy-action@4.1.4
+      with:
+        branch: gh-pages
+        folder: result/docs
