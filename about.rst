@@ -1,17 +1,11 @@
 ---
 title: About
 ---
-Nullam imperdiet sodales orci vitae molestie. Nunc quam orci, pharetra a
-rhoncus vitae, eleifend id felis. Suspendisse potenti. Etiam vitae urna orci.
-Quisque pellentesque dignissim felis, egestas tempus urna luctus vitae. In hac
-habitasse platea dictumst. Morbi fringilla mattis odio, et mattis tellus
-accumsan vitae.
+The main idea behind Monocle is to detect anomalies in the way changes
+are produced in your project on GitHub and Gerrit.
+Each team is unique in its way of working: how to do code reviews, how
+many reviewers, how to do CI, is self merge allowed...
 
-1. Amamus Unicode 碁
-2. Interdum nex magna.
-
-Vivamus eget mauris sit amet nulla laoreet lobortis. Nulla in diam elementum
-risus convallis commodo. Cras vehicula varius dui vitae facilisis. Proin
-elementum libero eget leo aliquet quis euismod orci vestibulum. Duis rhoncus
-lorem consequat tellus vestibulum aliquam. Quisque orci orci, malesuada porta
-blandit et, interdum nec magna.
+So the philosophy behind Monocle is to let you visualize and explore
+metrics and data that are relevant to the way you work by navigating
+and filtering in the web user interface.
