@@ -3,6 +3,22 @@
 
 import Data.Monoid (mappend)
 import Hakyll
+import Text.Pandoc
+import Text.Pandoc.Walk
+
+-- | Update section with links and adjust level to be lower than the title
+addSectionLinks :: Pandoc -> Pandoc
+addSectionLinks = walk f
+  where
+    f (Header n attr@(idAttr, _, _) inlines)
+      | n == 1 =
+        let link = Link ("", ["anchor"], []) [Str "§"] ("#" <> idAttr, "")
+         in Header (n + 1) attr ([link, Space] <> inlines)
+    f x = x
+
+customCompiler :: Compiler (Item String)
+customCompiler =
+  pandocCompilerWithTransform defaultHakyllReaderOptions defaultHakyllWriterOptions addSectionLinks
 
 --------------------------------------------------------------------------------
 main :: IO ()
@@ -15,7 +31,7 @@ main = hakyll $ do
     route idRoute
     compile compressCssCompiler
 
-  match (fromList ["about.rst", "contact.markdown"]) $ do
+  match (fromList ["about.md"]) $ do
     route $ setExtension "html"
     compile $
       pandocCompiler
@@ -25,7 +41,7 @@ main = hakyll $ do
   match "posts/*" $ do
     route $ setExtension "html"
     compile $
-      pandocCompiler
+      customCompiler
         >>= loadAndApplyTemplate "templates/post.html" postCtx
         >>= loadAndApplyTemplate "templates/default.html" postCtx
         >>= relativizeUrls
