@@ -1,0 +1,22 @@
+@startuml
+title OAuth workflow
+actor user as User
+participant "AuthMiddleware" as Auth
+participant "Servant" as Api
+entity "GitHub"  as GH
+
+User -> Auth    : call authenticated endpoint: ""/a/search""
+Auth -> User    : 303 redirect when session is expired
+...
+User -> Auth    : call auth endpoint: ""/auth/github""
+Auth -> User    : 303 redirect to github
+User -> GH      : <back:white>perform authentication: ""/login/oauth/authorize?client_id=APP_ID&redirect_url=APP_URL""</back>
+GH -> User      : 303 redirect to the redirect_url
+User -> Auth    : complete authentication: ""/auth/github/complete""
+Auth -> User    : authenticate session with cookie
+...
+User -> Auth    : call authenticated endpoint
+note right      : check cookie
+Auth -> Api
+Api -> User     : response
+@enduml
