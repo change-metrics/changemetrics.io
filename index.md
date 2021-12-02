@@ -33,15 +33,15 @@ Monocle supports Gerrit, GitHub, GitLab.
 
 The activity view:
 
-<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.1.0/monocle-activity.png" width="100%" height="100%" />
+<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.3.0/monocle-activity.png" width="100%" height="100%" />
 
 The developer board:
 
-<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.1.0/monocle-board.png" width="100%" height="100%" />
+<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.3.0/monocle-board.png" width="100%" height="100%" />
 
 Here is the graph of collaboration patterns:
 
-<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.1.0/monocle-peers-strength.png" width="100%" height="100%" />
+<img src="https://raw.githubusercontent.com/change-metrics/monocle/assets/images/monocle-1.3.0/monocle-peers-strength.png" width="100%" height="100%" />
 
 # Recent Posts
 
