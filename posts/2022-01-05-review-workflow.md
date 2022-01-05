@@ -35,7 +35,7 @@ My workflow
 
 I use the board once or twice a day, usually after breakfast and lunch. My goal is to empty the `To review` category:
 
-- I use the `hide change` feature to discard things that don't look important. (Monocle will un-hides on update)
+- I use the `hide change` feature to discard things that don't look important.
 - Then, I review the few remaining changes.
 - Monocle will unhide changes if they are updated.
 
