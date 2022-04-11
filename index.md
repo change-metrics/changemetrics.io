@@ -2,7 +2,8 @@
 title: Welcome
 ---
 
-Monocle helps teams and individual to better organize daily duties and
+[Monocle](https://github.com/change-metrics/monocle)
+helps teams and individual to better organize daily duties and
 to detect anomalies in the way changes are produced and reviewed.
 
 To achieve this Monocle provides:
@@ -27,7 +28,9 @@ For example, you may want to know:
 - What are the long standing changes?
 - Who are the new contributors?
 
-Monocle supports Gerrit, GitHub, GitLab.
+Monocle supports Gerrit, GitHub, GitLab. Check out the project at:
+[https://github.com/change-metrics/monocle](https://github.com/change-metrics/monocle).
+
 
 # Some screenshot of the web UI
 
