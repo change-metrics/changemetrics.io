@@ -39,7 +39,10 @@
     
 </div>
 
-<p>With <a href="https://github.com/change-metrics/monocle/pull/412">monocle#412</a> we are adding OAuth support to our new servant application. The goal is to enable user authentication so that the interface can be personalized, for example by adding support for the <code>self</code> value in search queries.</p>
+<p>With <a href="https://github.com/change-metrics/monocle/pull/412">monocle#412</a> we are
+adding OAuth support to our new servant application.
+The goal is to enable user authentication so that the interface can be
+personalized, for example by adding support for the <code>self</code> value in search queries.</p>
 <p>The challenge is to perform the OAuth handshake to resolve the user identity.</p>
 <h2 id="workflow"><a href="#workflow" class="anchor">§</a> Workflow</h2>
 <p>Here is the sequence diagram:</p>
@@ -47,68 +50,71 @@
 <img src="../images/oauth.png" />
 </center>
 <h2 id="oauth-configuration"><a href="#oauth-configuration" class="anchor">§</a> OAuth configuration</h2>
-<p>Currently there is no native solution for OAuth in servant, so we are going to use the <code>wai-middleware-auth</code>. Its configuration looks like this:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="co">-- | 'authSettings' returns the @wai-middleware-auth@ configuration</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="ot">authSettings ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Auth.AuthSettings</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>authSettings publicUrl oauthName oauthId oauthSecret <span class="ot">=</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a>  Auth.setAuthAppRootStatic publicUrl</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>    <span class="op">.</span> Auth.setAuthPrefix <span class="st">&quot;auth&quot;</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a>    <span class="op">.</span> Auth.setAuthProviders providers</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a>    <span class="op">.</span> Auth.setAuthSessionAge (<span class="dv">3600</span> <span class="op">*</span> <span class="dv">24</span> <span class="op">*</span> <span class="dv">7</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a>    <span class="op">$</span> Auth.defaultAuthSettings</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a>    emailAllowList <span class="ot">=</span> [<span class="st">&quot;.*&quot;</span>]</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a>    ghProvider <span class="ot">=</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a>      <span class="dt">Auth.Provider</span> <span class="op">$</span></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a>        Auth.mkGithubProvider oauthName oauthId oauthSecret emailAllowList <span class="dt">Nothing</span></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a>    providers <span class="ot">=</span> HM.fromList [(<span class="st">&quot;github&quot;</span>, ghProvider)]</span></code></pre></div>
+<p>Currently there is no native solution for OAuth in servant, so we are going to
+use the <code>wai-middleware-auth</code>. Its configuration looks like this:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- | 'authSettings' returns the @wai-middleware-auth@ configuration</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ot">authSettings ::</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Auth.AuthSettings</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>authSettings publicUrl oauthName oauthId oauthSecret <span class="ot">=</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  Auth.setAuthAppRootStatic publicUrl</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> Auth.setAuthPrefix <span class="st">&quot;auth&quot;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> Auth.setAuthProviders providers</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> Auth.setAuthSessionAge (<span class="dv">3600</span> <span class="op">*</span> <span class="dv">24</span> <span class="op">*</span> <span class="dv">7</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">$</span> Auth.defaultAuthSettings</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    emailAllowList <span class="ot">=</span> [<span class="st">&quot;.*&quot;</span>]</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    ghProvider <span class="ot">=</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      <span class="dt">Auth.Provider</span> <span class="op">$</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>        Auth.mkGithubProvider oauthName oauthId oauthSecret emailAllowList <span class="dt">Nothing</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    providers <span class="ot">=</span> HM.fromList [(<span class="st">&quot;github&quot;</span>, ghProvider)]</span></code></pre></div>
 <h2 id="dispatching-the-requests"><a href="#dispatching-the-requests" class="anchor">§</a> Dispatching the requests</h2>
-<p>In monocle, we want to support both annonymous and authenticated users, and the <code>wai-middleware-auth</code> enforces authentication for every request. So we create an extra middleware to dispatch the authentication only when necessary:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="co">-- | Apply the @wai-middleware-auth@ only on the paths starting with a /a/</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co">--</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="co">-- &gt;&gt;&gt; type Application = Request -&gt; (Response -&gt; IO ResponseReceived) -&gt; IO ResponseReceived</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="co">-- &gt;&gt;&gt; type Middleware = Application -&gt; Application</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a><span class="ot">enforceLoginPath ::</span> <span class="dt">Wai.Middleware</span> <span class="ot">-&gt;</span> <span class="dt">Wai.Middleware</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>enforceLoginPath authMiddleware monocleApp <span class="ot">=</span> app'</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>    app' request</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>      <span class="op">|</span> matchAuth (Wai.rawPathInfo request) <span class="ot">=</span> (authMiddleware monocleApp) request</span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a>      <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">=</span> monocleApp request</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a>    matchAuth path</span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a>      <span class="op">|</span> <span class="st">&quot;/a/&quot;</span> <span class="ot">`BS.isPrefixOf`</span> path <span class="op">||</span> <span class="st">&quot;/auth&quot;</span> <span class="ot">`BS.isPrefixOf`</span> path <span class="ot">=</span> <span class="dt">True</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a>      <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">=</span> <span class="dt">False</span></span></code></pre></div>
+<p>In monocle, we want to support both annonymous and authenticated users, and the
+<code>wai-middleware-auth</code> enforces authentication for every request. So we create an
+extra middleware to dispatch the authentication only when necessary:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- | Apply the @wai-middleware-auth@ only on the paths starting with a /a/</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">--</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">-- &gt;&gt;&gt; type Application = Request -&gt; (Response -&gt; IO ResponseReceived) -&gt; IO ResponseReceived</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co">-- &gt;&gt;&gt; type Middleware = Application -&gt; Application</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ot">enforceLoginPath ::</span> <span class="dt">Wai.Middleware</span> <span class="ot">-&gt;</span> <span class="dt">Wai.Middleware</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>enforceLoginPath authMiddleware monocleApp <span class="ot">=</span> app'</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    app' request</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>      <span class="op">|</span> matchAuth (Wai.rawPathInfo request) <span class="ot">=</span> (authMiddleware monocleApp) request</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>      <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">=</span> monocleApp request</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    matchAuth path</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      <span class="op">|</span> <span class="st">&quot;/a/&quot;</span> <span class="ot">`BS.isPrefixOf`</span> path <span class="op">||</span> <span class="st">&quot;/auth&quot;</span> <span class="ot">`BS.isPrefixOf`</span> path <span class="ot">=</span> <span class="dt">True</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      <span class="op">|</span> <span class="fu">otherwise</span> <span class="ot">=</span> <span class="dt">False</span></span></code></pre></div>
 <h2 id="creating-the-middleware"><a href="#creating-the-middleware" class="anchor">§</a> Creating the middleware</h2>
 <p>We only enable the middleware when there is an OAuth application environment:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co">-- | Create the middleware with the custom login path dispatch</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="ot">createAuthMiddleware ::</span> <span class="dt">IO</span> <span class="dt">Wai.Middleware</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>createAuthMiddleware <span class="ot">=</span> <span class="kw">do</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  envs <span class="ot">&lt;-</span> <span class="fu">traverse</span> lookupEnv [<span class="st">&quot;PUBLIC_URL&quot;</span>, <span class="st">&quot;OAUTH_NAME&quot;</span>, <span class="st">&quot;OAUTH_ID&quot;</span>, <span class="st">&quot;OAUTH_SECRET&quot;</span>]</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>  <span class="kw">case</span> toText <span class="op">&lt;$&gt;</span> catMaybes envs <span class="kw">of</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>    [publicUrl, oauthName, oauthId, oauthSecret] <span class="ot">-&gt;</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>      enforceLoginPath</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a>        <span class="op">&lt;$&gt;</span> Auth.mkAuthMiddleware (authSettings publicUrl oauthName oauthId oauthSecret)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a>    _ <span class="ot">-&gt;</span> <span class="fu">pure</span> <span class="fu">id</span></span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- | Create the middleware with the custom login path dispatch</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">createAuthMiddleware ::</span> <span class="dt">IO</span> <span class="dt">Wai.Middleware</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>createAuthMiddleware <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  envs <span class="ot">&lt;-</span> <span class="fu">traverse</span> lookupEnv [<span class="st">&quot;PUBLIC_URL&quot;</span>, <span class="st">&quot;OAUTH_NAME&quot;</span>, <span class="st">&quot;OAUTH_ID&quot;</span>, <span class="st">&quot;OAUTH_SECRET&quot;</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="kw">case</span> toText <span class="op">&lt;$&gt;</span> catMaybes envs <span class="kw">of</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    [publicUrl, oauthName, oauthId, oauthSecret] <span class="ot">-&gt;</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>      enforceLoginPath</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>        <span class="op">&lt;$&gt;</span> Auth.mkAuthMiddleware (authSettings publicUrl oauthName oauthId oauthSecret)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    _ <span class="ot">-&gt;</span> <span class="fu">pure</span> <span class="fu">id</span></span></code></pre></div>
 <h2 id="updating-the-route"><a href="#updating-the-route" class="anchor">§</a> Updating the route</h2>
 <p>Finaly we add the Vault to the authenticated route to access the user information:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">MonocleAPI</span> <span class="ot">=</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>  <span class="st">&quot;a&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;whoami&quot;</span> <span class="op">:&gt;</span> <span class="dt">Vault</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">WhoAmIRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">WhoAmIResponse</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;fields&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">FieldsRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">FieldsResponse</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;query&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">QueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">QueryResponse</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;a&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;query&quot;</span> <span class="op">:&gt;</span> <span class="dt">Vault</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">QueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">QueryResponse</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a><span class="ot">server ::</span> <span class="dt">ServerT</span> <span class="dt">MonocleAPI</span> <span class="dt">AppM</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a>server <span class="ot">=</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a>  authWhoAmI</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> searchFields</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> searchQuery</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true"></a>    <span class="op">:&lt;|&gt;</span> searchQueryAuth</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">MonocleAPI</span> <span class="ot">=</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">&quot;a&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;whoami&quot;</span> <span class="op">:&gt;</span> <span class="dt">Vault</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">WhoAmIRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">WhoAmIResponse</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;fields&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">FieldsRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">FieldsResponse</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;query&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">QueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">QueryResponse</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> <span class="st">&quot;a&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;search&quot;</span> <span class="op">:&gt;</span> <span class="st">&quot;query&quot;</span> <span class="op">:&gt;</span> <span class="dt">Vault</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">JSON</span>] <span class="dt">QueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>, <span class="dt">JSON</span>] <span class="dt">QueryResponse</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ot">server ::</span> <span class="dt">ServerT</span> <span class="dt">MonocleAPI</span> <span class="dt">AppM</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>server <span class="ot">=</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  authWhoAmI</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> searchFields</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> searchQuery</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">:&lt;|&gt;</span> searchQueryAuth</span></code></pre></div>
 <p>And here is an example usage for the <code>whoami</code> endpoint:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ot">authWhoAmI ::</span> <span class="dt">Vault</span> <span class="ot">-&gt;</span> <span class="dt">AuthPB.WhoAmIRequest</span> <span class="ot">-&gt;</span> <span class="dt">AppM</span> <span class="dt">AuthPB.WhoAmIResponse</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>authWhoAmI vault <span class="ot">=</span> <span class="fu">const</span> <span class="op">$</span> <span class="fu">pure</span> response</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a><span class="ot">    response ::</span> <span class="dt">AuthPB.WhoAmIResponse</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a>    response <span class="ot">=</span> <span class="dt">AuthPB.WhoAmIResponse</span> <span class="op">$</span> toLazy <span class="op">$</span> <span class="fu">show</span> user</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a>    user <span class="ot">=</span> fromMaybe (<span class="fu">error</span> <span class="st">&quot;Authentication is missing&quot;</span>) (Auth.getAuthUserFromVault vault)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ot">authWhoAmI ::</span> <span class="dt">Vault</span> <span class="ot">-&gt;</span> <span class="dt">AuthPB.WhoAmIRequest</span> <span class="ot">-&gt;</span> <span class="dt">AppM</span> <span class="dt">AuthPB.WhoAmIResponse</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>authWhoAmI vault <span class="ot">=</span> <span class="fu">const</span> <span class="op">$</span> <span class="fu">pure</span> response</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="ot">    response ::</span> <span class="dt">AuthPB.WhoAmIResponse</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    response <span class="ot">=</span> <span class="dt">AuthPB.WhoAmIResponse</span> <span class="op">$</span> toLazy <span class="op">$</span> <span class="fu">show</span> user</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    user <span class="ot">=</span> fromMaybe (<span class="fu">error</span> <span class="st">&quot;Authentication is missing&quot;</span>) (Auth.getAuthUserFromVault vault)</span></code></pre></div>
 <blockquote>
 <p>We contributed a new function to enable using <code>wai-middleware-auth</code> with <code>servant</code>: <a href="https://github.com/fpco/wai-middleware-auth/pull/25">wai-middleware-auth#25</a>.</p>
 </blockquote>

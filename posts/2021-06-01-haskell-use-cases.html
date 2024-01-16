@@ -43,108 +43,142 @@
 <p>This post was initially published on the Software Factory blog: https://www.softwarefactory-project.io/practical-haskell-use-cases.html</p>
 </blockquote>
 <p>This post presents a few practical projects in which we used Haskell succesfully.</p>
-<p>After using Python type annotations, and then the OCaml type system, a colleague and I started to use Haskell to better define our program. We are satisfied with the initial results, and it is my pleasure to share our use cases.</p>
+<p>After using Python type annotations, and then the OCaml type system, a colleague and I started to use Haskell to better define our program.
+We are satisfied with the initial results, and it is my pleasure to share our use cases.</p>
 <h2 id="lentille-a-bugzilla-task-data-crawler"><a href="#lentille-a-bugzilla-task-data-crawler" class="anchor">§</a> Lentille: a bugzilla task data crawler</h2>
-<p>Our goal was to perform Bugzilla API data processing. The challenge was to query a HTTP API and adapt the responses for our needs.</p>
-<p>Fortunately, a client library for <a href="https://hackage.haskell.org/package/bugzilla-redhat">bugzilla-redhat</a> already existed. It features a convenient <a href="https://hackage.haskell.org/package/bugzilla-redhat-0.3.1/docs/Web-Bugzilla-RedHat-Search.html">Search</a> module to define search expressions. This allowed us to define our query using type safe operators with this expression:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="ot">searchExpr ::</span> <span class="dt">UTCTime</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">SearchExpression</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>searchExpr sinceTS <span class="fu">product</span> <span class="ot">=</span> since <span class="op">.&amp;&amp;.</span> linkId <span class="op">.&amp;&amp;.</span> productField</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a>    linkId <span class="ot">=</span> BZS.isNotEmpty (<span class="dt">BZS.CustomField</span> <span class="st">&quot;ext_bz_bug_map.ext_bz_bug_id&quot;</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>    productField <span class="ot">=</span> <span class="dt">BZS.ProductField</span> <span class="op">.==.</span> <span class="fu">product</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a>    since <span class="ot">=</span> BZS.changedSince sinceTS</span></code></pre></div>
-<p>Then we used the <a href="https://hackage.haskell.org/package/streaming">streaming</a> library to isolate the queries from the processing. This provided an abstraction to handle the results in bulk (independently from the pagination logic). Here is the fetching function, using <a href="https://hackage.haskell.org/package/retry">retry</a> to handle network interruptions:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ot">getBZData ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> <span class="dt">BugzillaSession</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">UTCTime</span> <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">TaskData</span>) m ()</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>getBZData bzSession <span class="fu">product</span> since <span class="ot">=</span> go <span class="dv">0</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>    limit <span class="ot">=</span> <span class="dv">100</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a><span class="ot">    doGet ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> m [<span class="dt">Bug</span>]</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>    doGet offset <span class="ot">=</span> liftIO (getBugs bzSession sinceTS <span class="fu">product</span> limit offset)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>    go offset <span class="ot">=</span> <span class="kw">do</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a>      <span class="co">-- Retrieve rhbz</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a>      bugs <span class="ot">&lt;-</span> lift <span class="op">$</span> <span class="kw">do</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a>        <span class="fu">log</span> (<span class="dt">LogGetBugs</span> sinceTS offset limit)</span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a>        retry (doGet offset)</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a>      <span class="co">-- Create a flat stream of task data</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a>      S.each (<span class="fu">concatMap</span> toTaskData bugs)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true"></a>      <span class="co">-- Keep on retrieving the rest</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true"></a>      unless (<span class="fu">length</span> bugs <span class="op">&lt;</span> limit) (go (offset <span class="op">+</span> <span class="fu">length</span> bugs))</span></code></pre></div>
+<p>Our goal was to perform Bugzilla API data processing.
+The challenge was to query a HTTP API and adapt the responses for our needs.</p>
+<p>Fortunately, a client library for <a href="https://hackage.haskell.org/package/bugzilla-redhat">bugzilla-redhat</a> already existed.
+It features a convenient <a href="https://hackage.haskell.org/package/bugzilla-redhat-0.3.1/docs/Web-Bugzilla-RedHat-Search.html">Search</a> module to define search expressions.
+This allowed us to define our query using type safe operators with this expression:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ot">searchExpr ::</span> <span class="dt">UTCTime</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">SearchExpression</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>searchExpr sinceTS <span class="fu">product</span> <span class="ot">=</span> since <span class="op">.&amp;&amp;.</span> linkId <span class="op">.&amp;&amp;.</span> productField</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    linkId <span class="ot">=</span> BZS.isNotEmpty (<span class="dt">BZS.CustomField</span> <span class="st">&quot;ext_bz_bug_map.ext_bz_bug_id&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    productField <span class="ot">=</span> <span class="dt">BZS.ProductField</span> <span class="op">.==.</span> <span class="fu">product</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    since <span class="ot">=</span> BZS.changedSince sinceTS</span></code></pre></div>
+<p>Then we used the <a href="https://hackage.haskell.org/package/streaming">streaming</a> library to isolate the queries from the processing.
+This provided an abstraction to handle the results in bulk (independently from the pagination logic).
+Here is the fetching function, using <a href="https://hackage.haskell.org/package/retry">retry</a> to handle network interruptions:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ot">getBZData ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> <span class="dt">BugzillaSession</span> <span class="ot">-&gt;</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">UTCTime</span> <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">TaskData</span>) m ()</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>getBZData bzSession <span class="fu">product</span> since <span class="ot">=</span> go <span class="dv">0</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    limit <span class="ot">=</span> <span class="dv">100</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ot">    doGet ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> m [<span class="dt">Bug</span>]</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    doGet offset <span class="ot">=</span> liftIO (getBugs bzSession sinceTS <span class="fu">product</span> limit offset)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    go offset <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- Retrieve rhbz</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      bugs <span class="ot">&lt;-</span> lift <span class="op">$</span> <span class="kw">do</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">log</span> (<span class="dt">LogGetBugs</span> sinceTS offset limit)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>        retry (doGet offset)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- Create a flat stream of task data</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      S.each (<span class="fu">concatMap</span> toTaskData bugs)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- Keep on retrieving the rest</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>      unless (<span class="fu">length</span> bugs <span class="op">&lt;</span> limit) (go (offset <span class="op">+</span> <span class="fu">length</span> bugs))</span></code></pre></div>
 <p>And here is the stream processing function:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="co">-- Group by chunk of 500</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="ot">process ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> ([<span class="dt">TaskData</span>] <span class="ot">-&gt;</span> m <span class="dt">AddResponse</span>) <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">TaskData</span>) m () <span class="ot">-&gt;</span> m ()</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>process postFunc <span class="ot">=</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  S.print</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>    <span class="op">.</span> S.mapM (processBatch postFunc)</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>    <span class="op">.</span> S.mapped S.toList  <span class="co">-- Convert to list (type is Stream (Of [TaskData]) m ())</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>    <span class="op">.</span> S.chunksOf <span class="dv">500</span>     <span class="co">-- Chop the stream (type is Stream (Stream (Of TaskData) m) m ())</span></span></code></pre></div>
-<p>The client library missed a few features that we were able to implement locally. It was easy to integrate the work in progress changes using a <code>cabal.project</code> file to override the location of a build dependency. For example, we added <a href="https://github.com/juhp/hsbugzilla/pull/15/files">support for apikey</a>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- Group by chunk of 500</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ot">process ::</span> <span class="dt">MonadIO</span> m <span class="ot">=&gt;</span> ([<span class="dt">TaskData</span>] <span class="ot">-&gt;</span> m <span class="dt">AddResponse</span>) <span class="ot">-&gt;</span> <span class="dt">Stream</span> (<span class="dt">Of</span> <span class="dt">TaskData</span>) m () <span class="ot">-&gt;</span> m ()</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>process postFunc <span class="ot">=</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  S.print</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> S.mapM (processBatch postFunc)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> S.mapped S.toList  <span class="co">-- Convert to list (type is Stream (Of [TaskData]) m ())</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span> S.chunksOf <span class="dv">500</span>     <span class="co">-- Chop the stream (type is Stream (Stream (Of TaskData) m) m ())</span></span></code></pre></div>
+<p>The client library missed a few features that we were able to implement locally.
+It was easy to integrate the work in progress changes using a <code>cabal.project</code> file to override the location of a build dependency.
+For example, we added <a href="https://github.com/juhp/hsbugzilla/pull/15/files">support for apikey</a>.</p>
 <h2 id="monocle-http-api-based-on-protobuf"><a href="#monocle-http-api-based-on-protobuf" class="anchor">§</a> Monocle HTTP API based on Protobuf</h2>
-<p>Satisfied with the result of Lentille, we wanted to leverage this strongly typed approach for the API. The goal was to ensure the backend, the workers, and the frontend would use a common and well defined API. Check out this <a href="https://github.com/change-metrics/monocle/blob/master/doc/adr/0010-choice-of-protobuf.md">Architecture Decision Record</a> for more info.</p>
-<p>For consistency with the existing code, we used the Protobuf JSON encoding over HTTP. This allowed us to write a simple code generator for javascript <code>axios</code> client and python <code>flask</code> endpoint using the <a href="https://hackage.haskell.org/package/language-protobuf">language-protobuf</a> library. However we had issues with inconsistent JSON encoding. For example, this protobuf message:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode protobuf"><code class="sourceCode protobuf"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">message</span> AddResponse {</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>  oneof result {</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a>    TaskDataCommitSuccess success = <span class="dv">1</span>;</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a>    TaskDataCommitError error = <span class="dv">2</span>;</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a>  }</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a>}</span></code></pre></div>
-<p>… has two encodings: the python implementation produces <code>{"result": {"success": "ok"}}</code> while the ocaml implementation expects <code>{"success": "ok"}</code>. Fortunately, the Haskell implementation <a href="https://hackage.haskell.org/package/proto3-suite">proto3-suite</a> correctly handles both formats.</p>
-<p>Another issue that came up was about the Timestamp message from the Google protobuf well known type library. The official <code>protoc-compiler</code> transparently encodes this message as a rfc3339 string. We had to create a <a href="https://github.com/awakesecurity/proto3-suite/pull/150">custom timestamp decoder</a>.</p>
+<p>Satisfied with the result of Lentille, we wanted to leverage this strongly typed approach for the API.
+The goal was to ensure the backend, the workers, and the frontend would use a common and well defined API.
+Check out this <a href="https://github.com/change-metrics/monocle/blob/master/doc/adr/0010-choice-of-protobuf.md">Architecture Decision Record</a> for more info.</p>
+<p>For consistency with the existing code, we used the Protobuf JSON encoding over HTTP.
+This allowed us to write a simple code generator for javascript <code>axios</code> client and python <code>flask</code> endpoint using the <a href="https://hackage.haskell.org/package/language-protobuf">language-protobuf</a> library.
+However we had issues with inconsistent JSON encoding. For example, this protobuf message:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode protobuf"><code class="sourceCode protobuf"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">message</span> AddResponse {</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  oneof result {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    TaskDataCommitSuccess success = <span class="dv">1</span>;</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    TaskDataCommitError error = <span class="dv">2</span>;</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<p>… has two encodings: the python implementation produces <code>{"result": {"success": "ok"}}</code> while the ocaml implementation expects <code>{"success": "ok"}</code>.
+Fortunately, the Haskell implementation <a href="https://hackage.haskell.org/package/proto3-suite">proto3-suite</a> correctly handles both formats.</p>
+<p>Another issue that came up was about the Timestamp message from the Google protobuf well known type library.
+The official <code>protoc-compiler</code> transparently encodes this message as a rfc3339 string.
+We had to create a <a href="https://github.com/awakesecurity/proto3-suite/pull/150">custom timestamp decoder</a>.</p>
 <h2 id="monocle-search-query"><a href="#monocle-search-query" class="anchor">§</a> Monocle Search Query</h2>
-<p>Our goal was to improve the query interface by replacing a filters form with a query language. The challenge was to support text based query such as <code>(repo:openstack/nova or repo:openstack/ironic) and score&gt;200</code>. Check out the <a href="https://github.com/change-metrics/monocle/blob/master/doc/adr/0011-search-query-language.md">language architecture decision record</a> for more info.</p>
+<p>Our goal was to improve the query interface by replacing a filters form with a query language.
+The challenge was to support text based query such as <code>(repo:openstack/nova or repo:openstack/ironic) and score&gt;200</code>.
+Check out the <a href="https://github.com/change-metrics/monocle/blob/master/doc/adr/0011-search-query-language.md">language architecture decision record</a> for more info.</p>
 <p>Inspired by the work of Gabriel Gonzalez on interpreters, we used <a href="https://hackage.haskell.org/package/megaparsec">megaparsec</a> to implement the language:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ot">lexer ::</span> <span class="dt">Text</span>           <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> [<span class="dt">LocatedToken</span>]</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="ot">parse ::</span> [<span class="dt">LocatedToken</span>] <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Expr</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="ot">compile ::</span> <span class="dt">Expr</span>         <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Query</span></span></code></pre></div>
-<p>The query text was compiled to an Elastic search query with the <a href="https://hackage.haskell.org/package/bloodhound">bloodhound</a> library and they are served through a <a href="https://hackage.haskell.org/package/servant">servant</a> API. Using Servant required enabling complex extensions. Fortunately, the <a href="https://docs.servant.dev/en/stable/tutorial/ApiType.html">tutorial</a> explained everything we needed to know. Here is the new search API defined as a Haskell type:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">type</span> <span class="dt">MonocleAPI</span> <span class="ot">=</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>       <span class="st">&quot;search_fields&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">PBJSON</span>] <span class="dt">FieldsRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>] <span class="dt">FieldsResponse</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>  <span class="op">:&lt;|&gt;</span> <span class="st">&quot;changes&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">PBJSON</span>] <span class="dt">ChangesQueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>] <span class="dt">ChangesQueryResponse</span></span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ot">lexer ::</span> <span class="dt">Text</span>           <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> [<span class="dt">LocatedToken</span>]</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ot">parse ::</span> [<span class="dt">LocatedToken</span>] <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Expr</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="ot">compile ::</span> <span class="dt">Expr</span>         <span class="ot">-&gt;</span> <span class="dt">Either</span> <span class="dt">ParseError</span> <span class="dt">Query</span></span></code></pre></div>
+<p>The query text was compiled to an Elastic search query with the <a href="https://hackage.haskell.org/package/bloodhound">bloodhound</a> library and they are served through a <a href="https://hackage.haskell.org/package/servant">servant</a> API.
+Using Servant required enabling complex extensions.
+Fortunately, the <a href="https://docs.servant.dev/en/stable/tutorial/ApiType.html">tutorial</a> explained everything we needed to know.
+Here is the new search API defined as a Haskell type:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="kw">type</span> <span class="dt">MonocleAPI</span> <span class="ot">=</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>       <span class="st">&quot;search_fields&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">PBJSON</span>] <span class="dt">FieldsRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>] <span class="dt">FieldsResponse</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="op">:&lt;|&gt;</span> <span class="st">&quot;changes&quot;</span> <span class="op">:&gt;</span> <span class="dt">ReqBody</span> '[<span class="dt">PBJSON</span>] <span class="dt">ChangesQueryRequest</span> <span class="op">:&gt;</span> <span class="dt">Post</span> '[<span class="dt">PBJSON</span>] <span class="dt">ChangesQueryResponse</span></span></code></pre></div>
 <h2 id="lentille-graphql-client-for-github-and-gitlab"><a href="#lentille-graphql-client-for-github-and-gitlab" class="anchor">§</a> Lentille GraphQL client for GitHub and GitLab</h2>
-<p>Our goal was to perform data processing of GraphQL APIs. The challenge was to integrate complex queries defined using an extra language.</p>
+<p>Our goal was to perform data processing of GraphQL APIs.
+The challenge was to integrate complex queries defined using an extra language.</p>
 <p>We used the <a href="https://hackage.haskell.org/package/morpheus-graphql">morpheus-graphql</a> library to compile our GraphQL requests into Haskell functions.</p>
-<p>We were able to re-use the streaming api we previously wrote. Here is the fetching function that handles pagination cursor:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ot">streamFetch ::</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>  (<span class="dt">MonadIO</span> m, <span class="dt">Fetch</span> a, <span class="dt">FromJSON</span> a) <span class="ot">=&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>  <span class="dt">GitHubGraphClient</span> <span class="ot">-&gt;</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>  <span class="co">-- | query Args constructor, the function takes a cursor</span></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>  (<span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Args</span> a) <span class="ot">-&gt;</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>  <span class="co">-- | query result adapter</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true"></a>  (a <span class="ot">-&gt;</span> (<span class="dt">PageInfo</span>, <span class="dt">RateLimit</span>, [<span class="dt">Text</span>], [b])) <span class="ot">-&gt;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> b) m ()</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true"></a>streamFetch client mkArgs transformResponse <span class="ot">=</span> go <span class="dt">Nothing</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true"></a>  <span class="kw">where</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true"></a>    go pageInfoM <span class="ot">=</span> <span class="kw">do</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true"></a>      respE <span class="ot">&lt;-</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true"></a>        fetch</span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true"></a>          (runGithubGraphRequest client)</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true"></a>          (mkArgs (fromMaybe (<span class="fu">error</span> <span class="st">&quot;Missing endCursor&quot;</span>) (<span class="fu">maybe</span> (<span class="dt">Just</span> <span class="st">&quot;&quot;</span>) endCursor pageInfoM)))</span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true"></a>      <span class="kw">let</span> (pageInfo, rateLimit, decodingErrors, xs) <span class="ot">=</span> <span class="kw">case</span> respE <span class="kw">of</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true"></a>            <span class="dt">Left</span> err <span class="ot">-&gt;</span> <span class="fu">error</span> (toText err)</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true"></a>            <span class="dt">Right</span> resp <span class="ot">-&gt;</span> transformResponse resp</span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true"></a></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true"></a>      <span class="co">-- TODO: report decoding error</span></span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true"></a>      unless (<span class="fu">null</span> decodingErrors) (<span class="fu">error</span> (<span class="st">&quot;Decoding failed: &quot;</span> <span class="op">&lt;&gt;</span> <span class="fu">show</span> decodingErrors))</span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true"></a>      logStatus pageInfo rateLimit</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true"></a></span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true"></a>      <span class="co">-- Create a stream of 'b'</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true"></a>      S.each xs</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true"></a></span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true"></a>      <span class="co">-- Keep on retrieving the rest, TODO: implement throttle</span></span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true"></a>      when (hasNextPage pageInfo) (go (<span class="dt">Just</span> pageInfo))</span></code></pre></div>
-<p>Similar to Servant, using Morpheus GraphQL adds strong guarantees to our code. This comes at the cost of tediously handling complex data types. Fortunately, Haskell features pattern synonyms, which make the pattern matching on deeply nested structure a bit more manageable. Here is an example pattern to match the labels of a GitHub issue:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">pattern</span> <span class="dt">IssueLabels</span> nodesLabel</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a>  <span class="ot">&lt;-</span> <span class="dt">SearchNodesIssue</span> _ _ _ _ (<span class="dt">Just</span> (<span class="dt">SearchNodesLabelsLabelConnection</span> (<span class="dt">Just</span> nodesLabel))) _</span></code></pre></div>
+<p>We were able to re-use the streaming api we previously wrote.
+Here is the fetching function that handles pagination cursor:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ot">streamFetch ::</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  (<span class="dt">MonadIO</span> m, <span class="dt">Fetch</span> a, <span class="dt">FromJSON</span> a) <span class="ot">=&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">GitHubGraphClient</span> <span class="ot">-&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- | query Args constructor, the function takes a cursor</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  (<span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">Args</span> a) <span class="ot">-&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">-- | query result adapter</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  (a <span class="ot">-&gt;</span> (<span class="dt">PageInfo</span>, <span class="dt">RateLimit</span>, [<span class="dt">Text</span>], [b])) <span class="ot">-&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">Stream</span> (<span class="dt">Of</span> b) m ()</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>streamFetch client mkArgs transformResponse <span class="ot">=</span> go <span class="dt">Nothing</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="kw">where</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    go pageInfoM <span class="ot">=</span> <span class="kw">do</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      respE <span class="ot">&lt;-</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        fetch</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>          (runGithubGraphRequest client)</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>          (mkArgs (fromMaybe (<span class="fu">error</span> <span class="st">&quot;Missing endCursor&quot;</span>) (<span class="fu">maybe</span> (<span class="dt">Just</span> <span class="st">&quot;&quot;</span>) endCursor pageInfoM)))</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>      <span class="kw">let</span> (pageInfo, rateLimit, decodingErrors, xs) <span class="ot">=</span> <span class="kw">case</span> respE <span class="kw">of</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>            <span class="dt">Left</span> err <span class="ot">-&gt;</span> <span class="fu">error</span> (toText err)</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>            <span class="dt">Right</span> resp <span class="ot">-&gt;</span> transformResponse resp</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- </span><span class="al">TODO</span><span class="co">: report decoding error</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>      unless (<span class="fu">null</span> decodingErrors) (<span class="fu">error</span> (<span class="st">&quot;Decoding failed: &quot;</span> <span class="op">&lt;&gt;</span> <span class="fu">show</span> decodingErrors))</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>      logStatus pageInfo rateLimit</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- Create a stream of 'b'</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>      S.each xs</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>      <span class="co">-- Keep on retrieving the rest, </span><span class="al">TODO</span><span class="co">: implement throttle</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>      when (hasNextPage pageInfo) (go (<span class="dt">Just</span> pageInfo))</span></code></pre></div>
+<p>Similar to Servant, using Morpheus GraphQL adds strong guarantees to our code.
+This comes at the cost of tediously handling complex data types.
+Fortunately, Haskell features pattern synonyms, which make the pattern matching on deeply nested structure a bit more manageable.
+Here is an example pattern to match the labels of a GitHub issue:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">pattern</span> <span class="dt">IssueLabels</span> nodesLabel</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="ot">&lt;-</span> <span class="dt">SearchNodesIssue</span> _ _ _ _ (<span class="dt">Just</span> (<span class="dt">SearchNodesLabelsLabelConnection</span> (<span class="dt">Just</span> nodesLabel))) _</span></code></pre></div>
 <h2 id="conclusion"><a href="#conclusion" class="anchor">§</a> Conclusion</h2>
-<p>Haskell is designed to enable efficient programing. There is a wealth of libraries with which to compose, and thanks to the Haddock documentation system, we were able to integrate many of them.</p>
-<p>The type system makes code refactoring and code review really easy. It lets us focus on the core logic without having to worry about entire classes of bugs. In particular, Haskell helps us break monolith programs into well defined and re-usable functions. Being able to move the code fearlessly is incredibly powerfull.</p>
-<p>Moreover, the Haskell community is constantly producing interesting work. It is fascinating to see such progress in the development of a language.</p>
-<p>However, the learning curve is rather steep. We spent a lot of time fighting with errors produced by the type checker. While the editor support really helped, getting the code to compile was a challenge.</p>
-<p>Haskell compiler is currently very slow, and we had to do extra work to keep the continuous integration build time reasonable. A clean build of all our dependencies took 30 minutes, and we had to create a cumbersome layered container to keep the build time under 5 minutes.</p>
-<p>The Haskell syntax creates undesirable frictions for new contributors because it initially looks strange. After getting over the bump, the language makes a lot of sense and it is not difficult to learn.</p>
+<p>Haskell is designed to enable efficient programing.
+There is a wealth of libraries with which to compose, and thanks to the Haddock documentation system, we were able to integrate many of them.</p>
+<p>The type system makes code refactoring and code review really easy.
+It lets us focus on the core logic without having to worry about entire classes of bugs.
+In particular, Haskell helps us break monolith programs into well defined and re-usable functions.
+Being able to move the code fearlessly is incredibly powerfull.</p>
+<p>Moreover, the Haskell community is constantly producing interesting work.
+It is fascinating to see such progress in the development of a language.</p>
+<p>However, the learning curve is rather steep.
+We spent a lot of time fighting with errors produced by the type checker.
+While the editor support really helped, getting the code to compile was a challenge.</p>
+<p>Haskell compiler is currently very slow, and we had to do extra work to keep the continuous integration build time reasonable.
+A clean build of all our dependencies took 30 minutes, and we had to create a cumbersome layered container to keep the build time under 5 minutes.</p>
+<p>The Haskell syntax creates undesirable frictions for new contributors because it initially looks strange.
+After getting over the bump, the language makes a lot of sense and it is not difficult to learn.</p>
 <p>In the end, we are happy with the results, and the benefits of using Haskell quickly outweight the cost.</p>
 <p>Thanks for your time!</p>
 

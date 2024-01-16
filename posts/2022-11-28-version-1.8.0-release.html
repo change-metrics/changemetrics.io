@@ -42,30 +42,35 @@
 <p>We are pleased to announce a new release of Monocle.</p>
 <p>This release mainly features two new board features:</p>
 <ul>
-<li>The <strong>pin</strong> change button which make the change to appear highlighted. This is handy when you have some changes that you’d like follow carefully.</li>
-<li>The <strong>mask</strong> change button which prevent a change to appear anymore in the board. The usage is for <em>do not merged</em>, <em>testing CI</em> changes.</li>
+<li>The <strong>pin</strong> change button which make the change to appear highlighted. This is
+handy when you have some changes that you’d like follow carefully.</li>
+<li>The <strong>mask</strong> change button which prevent a change to appear anymore in
+the board. The usage is for <em>do not merged</em>, <em>testing CI</em> changes.</li>
 </ul>
-<p>Furthermore, this release brings a better support for the <em>draft/wip</em> changes. The Gerrit support has been fixed and <em>draft/wip</em> changes can be filtered by adding <strong>state:draft</strong> to your Monocle query.</p>
-<p>See the full <a href="https://github.com/change-metrics/monocle/blob/1.8.0/CHANGELOG.md">changelog</a> for the complete list of changes.</p>
+<p>Furthermore, this release brings a better support for the <em>draft/wip</em>
+changes. The Gerrit support has been fixed and <em>draft/wip</em> changes can be filtered by
+adding <strong>state:draft</strong> to your Monocle query.</p>
+<p>See the full <a href="https://github.com/change-metrics/monocle/blob/1.8.0/CHANGELOG.md">changelog</a> for
+the complete list of changes.</p>
 <p>Here are instructions to upgrade to 1.8.0:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="bu">cd</span> monocle</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="co"># Stop the previous running version</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="ex">docker-compose</span> down</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a><span class="co"># Checkout the tag 1.8.0</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a><span class="fu">git</span> fetch origin</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a><span class="fu">git</span> checkout -b 1.8.0 1.8.0</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a><span class="co"># Ensure to set COMPOSE_MONOCLE_VERSION=1.8.0 in .env file</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a><span class="fu">sed</span> -i .env -e <span class="st">&quot;/COMPOSE_MONOCLE_VERSION=.*/ d&quot;</span></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a><span class="bu">echo</span> <span class="st">&quot;COMPOSE_MONOCLE_VERSION=1.8.0&quot;</span> <span class="op">&gt;&gt;</span> .env</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a></span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a><span class="co"># Fetch last images</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true"></a><span class="ex">docker-compose</span> pull</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true"></a></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true"></a><span class="co"># Spawn services</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true"></a><span class="ex">docker-compose</span> up -d</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> monocle</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Stop the previous running version</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> down</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Checkout the tag 1.8.0</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> fetch origin</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> checkout <span class="at">-b</span> 1.8.0 1.8.0</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure to set COMPOSE_MONOCLE_VERSION=1.8.0 in .env file</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">sed</span> <span class="at">-i</span> .env <span class="at">-e</span> <span class="st">&quot;/COMPOSE_MONOCLE_VERSION=.*/ d&quot;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;COMPOSE_MONOCLE_VERSION=1.8.0&quot;</span> <span class="op">&gt;&gt;</span> .env</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch last images</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> pull</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Spawn services</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">docker-compose</span> up <span class="at">-d</span></span></code></pre></div>
 
         </div>
         <div id="footer">

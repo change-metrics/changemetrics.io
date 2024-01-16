@@ -40,10 +40,16 @@
 </div>
 
 <p>We are pleased to announce a new release of Monocle.</p>
-<p>This release mainly features a user authentication system and removes the need to use a httpd server to host static assets like the web application.</p>
-<p>With this release Monocle can be configured to authenticate user via an Identity provider supporting OpenID Connect. Authentication can be set to be optional or mandatory. Authenticated users with a matching Monocle Identity benefit personalized content.</p>
-<p>The compose file no longer setup the <code>web</code> container as static assets are served directly via the Monocle api service.</p>
-<p>Compose variables have been prefixed by COMPOSE_* so you might need to update your <code>.env</code> file.</p>
+<p>This release mainly features a user authentication system and removes the need to
+use a httpd server to host static assets like the web application.</p>
+<p>With this release Monocle can be configured to authenticate user via an Identity
+provider supporting OpenID Connect. Authentication can be set to be optional or
+mandatory. Authenticated users with a matching Monocle Identity benefit
+personalized content.</p>
+<p>The compose file no longer setup the <code>web</code> container as static assets are
+served directly via the Monocle api service.</p>
+<p>Compose variables have been prefixed by COMPOSE_* so you might need to
+update your <code>.env</code> file.</p>
 <p>Here are instructions to upgrade to 1.6.0:</p>
 <pre class="shell"><code>cd monocle
 
@@ -64,7 +70,8 @@ docker-compose pull
 
 # Spawn services
 docker-compose up -d</code></pre>
-<p>See the full <a href="https://github.com/change-metrics/monocle/blob/1.6.0/CHANGELOG.md">changelog</a> and the <a href="https://github.com/change-metrics/monocle/issues">backlog</a> for what’s coming next.</p>
+<p>See the full <a href="https://github.com/change-metrics/monocle/blob/1.6.0/CHANGELOG.md">changelog</a> and
+the <a href="https://github.com/change-metrics/monocle/issues">backlog</a> for what’s coming next.</p>
 
         </div>
         <div id="footer">
